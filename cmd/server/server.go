@@ -5,24 +5,43 @@ import (
 	"log"
 	"net/http"
 	"news/internal/api"
-	"news/internal/storage/postgres"
 	"strings"
 
+	m "news/internal/storage/mongo"
+
 	"github.com/jackc/pgx/v5/pgxpool"
+	"go.mongodb.org/mongo-driver/mongo"
+	"go.mongodb.org/mongo-driver/mongo/options"
 )
 
 func main() {
 	DB_URL := "postgres://alexa:alexa@localhost:5432/posts"
 
-	db, err := pgxpool.New(context.Background(), DB_URL)
+	pg, err := pgxpool.New(context.Background(), DB_URL)
 	if err != nil {
 		log.Fatalf("failed to connect to db: %v\n", err)
 	}
-	defer db.Close()
+	defer pg.Close()
 
-	st := postgres.NewStorage(db)
+	mongoOpts := options.Client().ApplyURI("mongodb://localhost:27017/")
+	mn, err := mongo.Connect(context.Background(), mongoOpts)
+	if err != nil {
+		log.Fatal(err)
+	}
+	defer mn.Disconnect(context.Background())
 
-	api := api.NewStorage(st)
+	err = mn.Ping(context.Background(), nil)
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	// pgSt := postgres.NewStorage(pg)
+	mgSt := m.NewStorage(mn)
+	// memSt := memdb.NewStorage()
+
+	// api := api.NewStorage(memSt)
+	api := api.NewStorage(mgSt)
+	// api := api.NewStorage(st)
 
 	mux := http.NewServeMux()
 
