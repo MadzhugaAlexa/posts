@@ -2,7 +2,6 @@ package mongo
 
 import (
 	"context"
-	"log"
 	"news/internal/storage"
 
 	"go.mongodb.org/mongo-driver/bson"
@@ -86,6 +85,10 @@ func (s *Storage) Find(id int) (storage.Post, error) {
 	var post storage.Post
 	err := c.Decode(&post)
 	if err != nil {
+		if err == mongo.ErrNoDocuments {
+			return storage.Post{}, storage.ErrNotFound
+		}
+
 		return storage.Post{}, err
 	}
 	return post, nil
@@ -94,7 +97,12 @@ func (s *Storage) Find(id int) (storage.Post, error) {
 func (s *Storage) DeletePost(id int) error {
 	collection := s.collection()
 	filter := bson.D{{"id", id}}
-	_, err := collection.DeleteOne(context.Background(), filter)
+	dr, err := collection.DeleteOne(context.Background(), filter)
+
+	if dr.DeletedCount == 0 {
+		return storage.ErrNotFound
+	}
+
 	if err != nil {
 		return err
 	}
@@ -106,8 +114,9 @@ func (s *Storage) UpdatePost(p *storage.Post) error {
 	collection := s.collection()
 	filter := bson.D{{"id", p.ID}}
 	_, err := collection.ReplaceOne(context.Background(), filter, p)
+
 	if err != nil {
-		log.Fatal(err)
+		return err
 	}
 
 	return err

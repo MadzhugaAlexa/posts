@@ -35,9 +35,16 @@ func (a *Api) FindAll(w http.ResponseWriter, r *http.Request) {
 
 func (a *Api) FindOne(idParam string, w http.ResponseWriter, r *http.Request) {
 	id, _ := strconv.Atoi(idParam)
+
 	post, err := a.storage.Find(id)
 	if err != nil {
-		panic(err)
+		if err == storage.ErrNotFound {
+			w.WriteHeader(http.StatusNotFound)
+			return
+		} else {
+			w.WriteHeader(http.StatusInternalServerError)
+			return
+		}
 	}
 
 	json.NewEncoder(w).Encode(post)
@@ -68,7 +75,16 @@ func (a *Api) Update(idParam string, w http.ResponseWriter, r *http.Request) {
 
 	post.ID = id
 
-	a.storage.UpdatePost(&post)
+	err = a.storage.UpdatePost(&post)
+	if err != nil {
+		if err == storage.ErrNotFound {
+			w.WriteHeader(http.StatusNotFound)
+			return
+		} else {
+			w.WriteHeader(http.StatusInternalServerError)
+			return
+		}
+	}
 
 	json.NewEncoder(w).Encode(post)
 }
@@ -78,7 +94,13 @@ func (a *Api) Delete(idParam string, w http.ResponseWriter, r *http.Request) {
 
 	err := a.storage.DeletePost(id)
 	if err != nil {
-		panic(err)
+		if err == storage.ErrNotFound {
+			w.WriteHeader(http.StatusNotFound)
+			return
+		} else {
+			w.WriteHeader(http.StatusInternalServerError)
+			return
+		}
 	}
 
 	return

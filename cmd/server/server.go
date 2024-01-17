@@ -5,9 +5,10 @@ import (
 	"log"
 	"net/http"
 	"news/internal/api"
-	"strings"
+	"news/internal/storage/memdb"
 
-	m "news/internal/storage/mongo"
+	// m "news/internal/storage/mongo"
+	"strings"
 
 	"github.com/jackc/pgx/v5/pgxpool"
 	"go.mongodb.org/mongo-driver/mongo"
@@ -35,13 +36,11 @@ func main() {
 		log.Fatal(err)
 	}
 
-	// pgSt := postgres.NewStorage(pg)
-	mgSt := m.NewStorage(mn)
-	// memSt := memdb.NewStorage()
+	// st := postgres.NewStorage(pg)
+	// st := m.NewStorage(mn)
+	st := memdb.NewStorage()
 
-	// api := api.NewStorage(memSt)
-	api := api.NewStorage(mgSt)
-	// api := api.NewStorage(st)
+	api := api.NewStorage(st)
 
 	mux := http.NewServeMux()
 

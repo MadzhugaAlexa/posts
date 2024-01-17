@@ -2,9 +2,9 @@ package postgres
 
 import (
 	"context"
-	"errors"
 	"news/internal/storage"
 
+	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgxpool"
 )
 
@@ -71,6 +71,10 @@ func (s *Storage) Find(id int) (storage.Post, error) {
 
 	err := row.Scan(&post.ID, &post.AuthorID, &post.Title, &post.Content, &post.CreatedAt, &post.PublishedAt)
 	if err != nil {
+		if err == pgx.ErrNoRows {
+			return post, storage.ErrNotFound
+		}
+
 		return post, err
 	}
 
@@ -82,10 +86,14 @@ func (s *Storage) UpdatePost(p *storage.Post) error {
 		author_id = $1, title = $2, content = $3, created_at = $4, published_at = $5
         where id = $6`
 
-	_, err := s.db.Exec(
+	tag, err := s.db.Exec(
 		context.Background(),
 		sql,
 		p.AuthorID, p.Title, p.Content, p.CreatedAt, p.PublishedAt, p.ID)
+
+	if tag.RowsAffected() == 0 {
+		return storage.ErrNotFound
+	}
 
 	if err != nil {
 		return err
@@ -103,7 +111,7 @@ func (s *Storage) DeletePost(id int) error {
 	}
 
 	if tag.RowsAffected() == 0 {
-		return errors.New("не найдена запись")
+		return storage.ErrNotFound
 	}
 
 	return nil

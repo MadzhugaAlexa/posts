@@ -45,12 +45,20 @@ func (s *Storage) Find(id int) (storage.Post, error) {
 	defer s.mu.RUnlock()
 
 	post := s.posts[id]
+	if post == nil {
+		return storage.Post{}, storage.ErrNotFound
+	}
+
 	return *post, nil
 }
 
 func (s *Storage) UpdatePost(p *storage.Post) error {
 	s.mu.Lock()
 	defer s.mu.Unlock()
+
+	if s.posts[p.ID] == nil {
+		return storage.ErrNotFound
+	}
 
 	s.posts[p.ID] = p
 
@@ -60,6 +68,10 @@ func (s *Storage) UpdatePost(p *storage.Post) error {
 func (s *Storage) DeletePost(id int) error {
 	s.mu.Lock()
 	defer s.mu.Unlock()
+
+	if s.posts[id] == nil {
+		return storage.ErrNotFound
+	}
 
 	delete(s.posts, id)
 	return nil
